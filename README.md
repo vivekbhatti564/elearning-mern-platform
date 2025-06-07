@@ -19,6 +19,50 @@ This project demonstrates how to deploy a React and Node.js-based e-learning pla
 
 ---
 
+## Installation
+
+1. Clone the repository:
+
+```bash
+https://github.com/Sai-Chakradhar-Mahendrakar/Elearning-Platform-Using-MERN.git
+```
+
+2. Navigate to the project directory:
+
+```bash
+cd Elearning-Platform-Using-MERN
+```
+
+3. Install dependencies for the server:
+
+```bash
+cd backend
+npm install
+```
+
+4. Navigate to the client directory and install client dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+5. Run Frontend:
+
+```bash
+cd frontend
+npm start
+```
+
+6. Run Backend:
+
+```bash
+cd backend
+node index.js
+```
+
+The application will be accessible at `http://localhost:3000`.
+
 ### 🐳 Docker Image Build (Manual)
 ```bash
 # Frontend
