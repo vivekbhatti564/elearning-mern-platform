@@ -24,7 +24,7 @@ This project demonstrates how to deploy a React and Node.js-based e-learning pla
 1. Clone the repository:
 
 ```bash
-https://github.com/Sai-Chakradhar-Mahendrakar/Elearning-Platform-Using-MERN.git
+https://github.com/vivekbhatti564/elearning-mern-platform.git
 ```
 
 2. Navigate to the project directory:
