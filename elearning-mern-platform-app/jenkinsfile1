@@ -12,7 +12,7 @@ pipeline {
         DOCKERHUB_USER = 'vivekbhatti597'     // Replace with your Docker Hub username
         BACKEND_IMAGE = "${DOCKERHUB_USER}/backend:latest"
         FRONTEND_IMAGE = "${DOCKERHUB_USER}/frontend:latest"
-        EKS_CLUSTER = 'your-eks-cluster-name'
+        EKS_CLUSTER = 'major-project-eks'
         AWS_REGION = 'us-east-1'
     }
 
