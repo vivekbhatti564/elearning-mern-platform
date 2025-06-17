@@ -1,0 +1,14 @@
+# Use official Node.js image
+FROM node:18-alpine
+
+WORKDIR /app
+COPY . .
+
+# Install dependencies
+RUN npm install --production
+
+# Expose backend API port (adjust if needed)
+EXPOSE 5000
+
+# Run the app
+CMD ["node", "index.js"]

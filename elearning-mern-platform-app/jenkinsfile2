@@ -1,0 +1,111 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'nodejs-18'
+        jdk 'jdk17'
+    }
+
+    environment {
+        DOCKERHUB_USER = 'yourdockerhub'     // Replace with your Docker Hub username
+        BACKEND_IMAGE = "${DOCKERHUB_USER}/backend:latest"
+        FRONTEND_IMAGE = "${DOCKERHUB_USER}/frontend:latest"
+        DOCKER_CRED_ID = 'dockerhub-creds'
+        SONARQUBE_SERVER = 'SonarQubeServer'
+        EKS_CLUSTER = 'your-eks-cluster-name'
+        AWS_REGION = 'us-east-1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/your-repo/e-learning.git'
+            }
+        }
+
+        stage('Frontend - Build & Scan') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                    npm install
+                    npm run build
+                    trivy fs . > ../frontend-trivy.txt
+                    '''
+                }
+            }
+        }
+
+        stage('Backend - Build & Scan') {
+            steps {
+                dir('backend') {
+                    sh '''
+                    npm install
+                    trivy fs . > ../backend-trivy.txt
+
+                    docker run --rm -v $(pwd):/src -v $(pwd)/odc:/report \
+                    owasp/dependency-check \
+                    --project "e-learning" \
+                    --scan /src --out /report --format HTML
+                    '''
+                }
+            }
+        }
+
+        stage('SonarQube Scan') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                    dir('backend') {
+                        sh '''
+                        npx sonar-scanner \
+                          -Dsonar.projectKey=backend \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=$SONAR_HOST_URL \
+                          -Dsonar.login=$SONAR_AUTH_TOKEN
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    docker.withRegistry('', "${DOCKER_CRED_ID}") {
+                        sh """
+                        docker build -t $FRONTEND_IMAGE ./frontend
+                        docker push $FRONTEND_IMAGE
+
+                        docker build -t $BACKEND_IMAGE ./backend
+                        docker push $BACKEND_IMAGE
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy using Helm') {
+            steps {
+                script {
+                    sh '''
+                    aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
+                    cd helm/e-learning
+                    helm upgrade --install elearn . \
+                      --set frontend.image=$FRONTEND_IMAGE \
+                      --set backend.image=$BACKEND_IMAGE
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            emailext(
+                subject: "'${currentBuild.result}' - Jenkins CI/CD",
+                body: "Pipeline: ${env.JOB_NAME}<br>Build: #${env.BUILD_NUMBER}<br>Status: ${currentBuild.result}<br><a href='${env.BUILD_URL}'>View Details</a>",
+                to: 'youremail@example.com',
+                attachmentsPattern: 'frontend-trivy.txt,backend-trivy.txt'
+            )
+        }
+    }
+}

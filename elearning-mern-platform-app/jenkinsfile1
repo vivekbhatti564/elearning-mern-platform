@@ -1,0 +1,108 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'nodejs-18'
+        jdk 'jdk17'
+    }
+
+    environment {
+        SONARQUBE_SERVER = 'SonarQubeServer'
+        DOCKER_CRED_ID = 'dockerhub-creds'
+        DOCKERHUB_USER = 'vivekbhatti597'     // Replace with your Docker Hub username
+        BACKEND_IMAGE = "${DOCKERHUB_USER}/backend:latest"
+        FRONTEND_IMAGE = "${DOCKERHUB_USER}/frontend:latest"
+        EKS_CLUSTER = 'your-eks-cluster-name'
+        AWS_REGION = 'us-east-1'
+    }
+
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/your-repo/e-learning.git' // Replace with your repo
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                    dir('backend') {
+                        sh '''
+                        npx sonar-scanner \
+                          -Dsonar.projectKey=backend \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=$SONAR_HOST_URL \
+                          -Dsonar.login=$SONAR_AUTH_TOKEN
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                waitForQualityGate abortPipeline: true
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                sh '''
+                trivy fs ./backend > backend-trivy.txt
+                trivy fs ./frontend > frontend-trivy.txt
+                '''
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    docker.withRegistry('', "${DOCKER_CRED_ID}") {
+                        sh '''
+                        docker build -t $BACKEND_IMAGE ./backend
+                        docker push $BACKEND_IMAGE
+
+                        docker build -t $FRONTEND_IMAGE ./frontend
+                        docker push $FRONTEND_IMAGE
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    sh '''
+                    aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
+
+                    kubectl apply -f k8s/backend-deployment.yaml
+                    kubectl apply -f k8s/backend-service.yaml
+
+                    kubectl apply -f k8s/frontend-deployment.yaml
+                    kubectl apply -f k8s/frontend-service.yaml
+
+                    kubectl apply -f k8s/ingress.yaml
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            emailext(
+                subject: "'${currentBuild.result}' - Job: ${env.JOB_NAME}",
+                body: "Build result: ${currentBuild.result}<br>URL: ${env.BUILD_URL}",
+                to: 'vivekbhatti564@gmail.com', // Replace with your email
+                attachmentsPattern: 'backend-trivy.txt,frontend-trivy.txt'
+            )
+        }
+    }
+}

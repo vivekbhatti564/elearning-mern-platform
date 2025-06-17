@@ -1,0 +1,112 @@
+(without K8S Stage)
+pipeline {
+    agent any
+    tools {
+        jdk 'jdk17'
+        nodejs 'node23'
+    }
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+    }
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        stage('Checkout from Git') {
+            steps {
+                git 'https://github.com/vivekbhatti564/elearning-mern-platform.git'
+                sh 'ls -la'  // Verify files after checkout
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh ''' 
+                    $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=elearning \
+                    -Dsonar.projectKey=elearning
+                    '''
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                }
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                cd elearning-mern-platform-app/frontend
+                ls -la  # Verify package.json exists
+                if [ -f package.json ]; then
+                    rm -rf node_modules package-lock.json  # Remove old dependencies
+                    npm install  # Install fresh dependencies
+                else
+                    echo "Error: package.json not found in elearning-mern-platform-app/frontend!"
+                    exit 1
+                fi
+                '''
+            }
+        }
+        stage('OWASP FS Scan') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage('Trivy FS Scan') {
+            steps {
+                sh 'trivy fs . > trivyfs.txt'
+            }
+        }
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh ''' 
+                        echo "Building Docker image..."
+                        docker build --no-cache -t vivekbhatti597/elearning:latest -f elearning-mern-platform-app/frontend/Dockerfile elearning-mern-platform-app
+
+                        echo "Pushing Docker image to registry..."
+                        docker push vivekbhatti597/elearning:latest
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Deploy to Container') {
+            steps {
+                sh ''' 
+                echo "Stopping and removing old container..."
+                docker stop elearning || true
+                docker rm elearning || true
+
+                echo "Running new container on port 3000..."
+                docker run -d --restart=always --name elearning -p 3000:3000 vivekbhatti597/elearning:latest
+
+                echo "Checking running containers..."
+                docker ps -a
+
+                echo "Fetching logs..."
+                sleep 5  # Give time for the app to start
+                docker logs elearning
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            emailext attachLog: true,
+                subject: "'${currentBuild.result}'",
+                body: "Project: ${env.JOB_NAME}<br/>" +
+                      "Build Number: ${env.BUILD_NUMBER}<br/>" +
+                      "URL: ${env.BUILD_URL}<br/>",
+                to: 'vivekbhatti564@gmail.com',
+                attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
+        }
+    }
+}

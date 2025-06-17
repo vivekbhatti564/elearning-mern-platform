@@ -1,0 +1,7 @@
+frontend:
+  image: yourdockerhub/frontend:latest
+  port: 80
+
+backend:
+  image: yourdockerhub/backend:latest
+  port: 5000
