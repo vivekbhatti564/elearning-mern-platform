@@ -85,8 +85,8 @@ pipeline {
                 docker stop elearning || true
                 docker rm elearning || true
 
-                echo "Running new container on port 3000..."
-                docker run -d --restart=always --name elearning -p 3000:3000 vivekbhatti597/elearning:latest
+                echo "Running new container on port 3700..."
+                docker run -d --restart=always --name elearning -p 3700:3700 vivekbhatti597/elearning:latest
 
                 echo "Checking running containers..."
                 docker ps -a
