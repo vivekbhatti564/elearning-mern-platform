@@ -8,6 +8,6 @@ spec:
   type: LoadBalancer
   ports:
   - port: 80
-    targetPort: 3000  # Replace with the port your app runs on
+    targetPort: 3700  # Replace with the port your app runs on
   selector:
     app: elearning
