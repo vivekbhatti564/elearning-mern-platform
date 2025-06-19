@@ -3,7 +3,7 @@ const { connection } = require("./db");
 const { userRouter } = require("./routes/users.routes");
 const { courseRoute } = require("./routes/courses.route");
 const { videoRoute } = require("./routes/videos.route");
-
+const PORT = process.env.PORT || 3700;
 const cors = require('cors')
 
 
@@ -48,7 +48,9 @@ app.get('/',(req,res)=>{
     res.status(400).json({ message: "Some Error Occur. Please Refresh" });
   }
 })
-
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+});
 app.listen(process.env.port, async () => {
   try {
     await connection;
