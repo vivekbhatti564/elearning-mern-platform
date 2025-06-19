@@ -7,6 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "server": "nodemon index.js"
   },
+  {
+  "scripts": {
+  "start": "node index.js"  // or "server.js", depending on your entry file
+}
   "keywords": [],
   "author": " ",
   "license": "ISC",
