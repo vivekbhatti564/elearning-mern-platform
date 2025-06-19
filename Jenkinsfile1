@@ -69,7 +69,7 @@ pipeline {
                     withDockerRegistry([credentialsId: 'dockerhub', url: 'https://index.docker.io/v1/']) {
                         sh ''' 
                         echo "Building Docker image..."
-                        docker build --no-cache -t vivekbhatti597/elearning:latest -f elearning-mern-platform/frontend/Dockerfile elearning-mern-platform
+                        docker build --no-cache -t vivekbhatti597/elearning:latest -f elearning-mern-platform-app/frontend/Dockerfile elearning-mern-platform-app
 
                         echo "Pushing Docker image to registry..."
                         docker push vivekbhatti597/elearning:latest
