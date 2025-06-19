@@ -15,7 +15,7 @@ spec:
         app: elearning
     spec:
       containers:
-      - name: elearning-container
+      - name: elearning
         image: vivekbhatti597/elearning:latest  # Replace with your Docker image
         ports:
         - containerPort: 3700  # Replace with the port your app runs on
