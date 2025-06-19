@@ -40,13 +40,13 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                cd elearning-mern-platform/frontend
+                cd elearning-mern-platform-app/frontend
                 ls -la  # Verify package.json exists
                 if [ -f package.json ]; then
                     rm -rf node_modules package-lock.json  # Remove old dependencies
                     npm install  # Install fresh dependencies
                 else
-                    echo "Error: package.json not found in elearning-mern-platform/frontend!"
+                    echo "Error: package.json not found in elearning-mern-platform-app/frontend!"
                     exit 1
                 fi
                 '''
